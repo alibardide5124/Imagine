@@ -19,17 +19,12 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.graphics.BitmapCompat
 import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
-import androidx.lifecycle.lifecycleScope
 import com.alibardide.booklet.utils.FileUtil
 import com.gun0912.tedpermission.PermissionListener
 import com.gun0912.tedpermission.TedPermission
 import id.zelory.compressor.Compressor
-import id.zelory.compressor.constraint.format
-import id.zelory.compressor.constraint.quality
 import id.zelory.compressor.constraint.resolution
-import id.zelory.compressor.loadBitmap
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -69,6 +64,21 @@ class MainActivity : AppCompatActivity() {
         }
         mainCompress.setOnClickListener {
             compress()
+        }
+
+        mainAbout.setOnClickListener {
+            val alertDialog = AlertDialog.Builder(this)
+                .setTitle("About me")
+                .setMessage("Developed by Ali Bardide")
+                .setPositiveButton("ok", null)
+                .setNeutralButton("GitHub") { _: DialogInterface, _: Int ->
+                    val url = "https://github.com/alibardide5124/Imagine"
+                    val i = Intent(Intent.ACTION_VIEW)
+                    i.data = Uri.parse(url)
+                    startActivity(i)
+                }
+            alertDialog.create()
+                .show()
         }
     }
     private fun pickImage() {
