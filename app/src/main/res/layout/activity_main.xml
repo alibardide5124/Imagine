@@ -8,13 +8,14 @@
 
     <ImageView
         android:id="@+id/mainAbout"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:padding="8dp"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:padding="12dp"
         android:background="?selectableItemBackground"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_info_square" />
+        app:srcCompat="@drawable/ic_info_square"
+        tools:ignore="ContentDescription" />
 
     <ImageView
         android:id="@+id/mainPicture"
@@ -27,13 +28,14 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:srcCompat="@tools:sample/avatars" />
+        tools:srcCompat="@tools:sample/avatars"
+        tools:ignore="ContentDescription" />
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/mainPick"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Pick Image"
+        android:text="@string/pick_image"
         android:textColor="?android:textColorPrimaryInverse"
         app:backgroundTint="@color/colorPrimary"
         app:icon="@drawable/ic_download"
@@ -48,7 +50,7 @@
         android:id="@+id/mainCompress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Compress Image"
+        android:text="@string/compress_image"
         android:textColor="?android:textColorPrimaryInverse"
         android:visibility="gone"
         app:backgroundTint="@color/colorAccent"

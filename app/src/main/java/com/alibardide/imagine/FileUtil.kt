@@ -1,4 +1,4 @@
-package com.alibardide.booklet.utils
+package com.alibardide.imagine
 
 import android.content.Context
 import android.net.Uri
