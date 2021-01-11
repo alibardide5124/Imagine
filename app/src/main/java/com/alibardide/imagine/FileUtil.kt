@@ -15,7 +15,7 @@ internal object FileUtil {
         val inputStream = context.contentResolver.openInputStream(uri)
         val fileName = getFileName(context, uri)
         val splitName = splitFileName(fileName)
-        var tempFile = File.createTempFile(splitName[0], splitName[1])
+        var tempFile = File.createTempFile(splitName[0]!!, splitName[1])
         tempFile = rename(tempFile, fileName)
         tempFile.deleteOnExit()
         var out: FileOutputStream? = null
@@ -72,7 +72,7 @@ internal object FileUtil {
     }
 
     private fun rename(file: File, newName: String?): File {
-        val newFile = File(file.parent, newName)
+        val newFile = File(file.parent, newName!!)
         if (newFile != file) {
             if (newFile.exists() && newFile.delete()) {
                 Log.d("FileUtil", "Delete old $newName file")
