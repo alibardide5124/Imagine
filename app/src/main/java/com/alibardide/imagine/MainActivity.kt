@@ -5,16 +5,11 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.DialogInterface
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
 import com.gun0912.tedpermission.PermissionListener
 import com.gun0912.tedpermission.TedPermission
 import id.zelory.compressor.Compressor
@@ -24,132 +19,90 @@ import kotlinx.android.synthetic.main.dialog_progress.view.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
 
     companion object { const val RESULT_PICK_IMAGE = 101 }
-    private val saveDir = "/Pictures/Imagine/"
+    private val saveDir = "Pictures/Imagine/"
     private var hasImage = false
     private var imageFile: File? = null
+    private lateinit var progress: AlertDialog
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mainPick.setOnClickListener {
-            val listener = object: PermissionListener {
-                override fun onPermissionGranted() {
-                    pickImage()
-                }
-                override fun onPermissionDenied(deniedPermissions: MutableList<String>?) {
-                    toast("Permission Denied")
-                }
-            }
-            TedPermission.with(this)
-                .setPermissionListener(listener)
-                .setPermissions(
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                .check()
-        }
+        progress = progressAlertDialog()
+        mainPick.setOnClickListener { pickImage() }
         mainCompress.setOnClickListener { compress() }
-        mainAbout.setOnClickListener {
-            val alertDialog = AlertDialog.Builder(this)
-                .setTitle("About me")
-                .setMessage("Developed by Ali Bardide\n\nLicensed on Apache 2.0")
-                .setPositiveButton("ok", null)
-                .setNeutralButton("GitHub") { _: DialogInterface, _: Int ->
-                    val url = "https://github.com/alibardide5124/imagine.git"
-                    val i = Intent(Intent.ACTION_VIEW)
-                    i.data = Uri.parse(url)
-                    startActivity(i)
-                }
-            alertDialog.create()
-                .show()
+        mainAbout.setOnClickListener { aboutDialog().show() }
+    }
+    private fun askPermission() : Boolean{
+        // Permission listener
+        var result = false
+        val listener = object: PermissionListener {
+            override fun onPermissionGranted() {
+                result = true
+            }
+            override fun onPermissionDenied(deniedPermissions: MutableList<String>?) {}
         }
+        // Get Permission with TedPermission library
+        TedPermission.with(this)
+            .setPermissionListener(listener)
+            .setPermissions(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            .check()
+        return result
     }
     private fun pickImage() {
+        // Check if we have permissions
+        if (!askPermission()) {
+            toast("Permission Denied").show()
+            return
+        }
+        // Pick image file
         val intent = Intent(Intent.ACTION_GET_CONTENT)
         intent.type = "image/*"
         startActivityForResult(intent, RESULT_PICK_IMAGE)
     }
     private fun compress() {
+        // Check if we have any image
         if (hasImage) {
+            // If image not null do something
             imageFile?.let { file ->
-                val dialog = progressAlertDialog()
-                dialog.show()
+                progress.show()
+                // Launch a GlobalScope
                 GlobalScope.launch {
+                    // Decode selected file, compress file and save compressed file
                     val bitmap = BitmapFactory.decodeFile(file.absolutePath)
                     val compressedImage = Compressor.compress(this@MainActivity, file) {
                         resolution(bitmap.width, bitmap.height)
                     }
-                    savePic(compressedImage, dialog)
+                    ImageUtil.save(this@MainActivity, compressedImage, saveDir)
+                    progress.dismiss()
                 }
             }
-        } else { toast("No image selected")}
+        } else { toast("No image selected").show() }
     }
-    private fun toast(message: String, length: Int = Toast.LENGTH_SHORT) {
-        Toast.makeText(this, message, length).show()
-    }
-    private fun loadImage(path: String, imageView: ImageView) {
-        AsyncTaskNeo(this).executeAsyncTask<Drawable?, Boolean> (
-            onPreExecute = {},
-            doInBackground = {
-                var drawable: Drawable? = null
-                try {
-                    val inputStream = FileInputStream(path)
-                    drawable = RoundedBitmapDrawableFactory.create(resources, inputStream)
-                    drawable.isCircular = true
-                    drawable.cornerRadius = 20f
-                } catch (e: IOException) {}
-                drawable
-            },
-            onProgressUpdate = {},
-            onPostExecute = {
-                it?.let { imageView.setImageDrawable(it) }
-            }
-        )
-    }
-    private fun savePic(file: File?, dialog: AlertDialog) {
-        AsyncTaskNeo(this).executeAsyncTask (
-            onPreExecute = {},
-            doInBackground = { _: suspend (progress: Int) -> Unit ->
-                if (file == null) false
-                else {
-                    try {
-                        if (Environment.MEDIA_MOUNTED == Environment.getExternalStorageState()) {
-                            val root =
-                                Environment.getExternalStorageDirectory().absolutePath + saveDir
-                            val dir = File(root)
-                            if (!dir.exists()) dir.mkdirs()
-                            val sFile = File(dir, "imagine.${file.name}")
-                            FileOutputStream(sFile).use {
-                                BitmapFactory.decodeFile(file.absolutePath)
-                                    .compress(Bitmap.CompressFormat.JPEG, 70, it)
-                                it.flush()
-                            }
-                            true
-                        } else { false }
-                    } catch (e: IOException) { false }
-                }
-            },
-            onProgressUpdate = {},
-            onPostExecute = { result ->
-                dialog.dismiss()
-                val alertDialog = AlertDialog.Builder(this)
-                    .setTitle("Compress Picture")
-                    .setMessage("failed to compress picture!")
-                    .setPositiveButton("ok", null)
-                if (result) alertDialog.setMessage("File saved to:\n$saveDir")
-                alertDialog.create()
-                    .show()
-            }
-        )
+    private fun aboutDialog() : AlertDialog {
+        // About alert dialog
+        // info for get app version
+        val info = packageManager.getPackageInfo(packageName, 0)
+        return AlertDialog.Builder(this)
+            .setTitle(getString(R.string.app_name) + " ${info.versionName}")
+            .setMessage("Developed by Ali Bardide\n\nLicensed on Apache 2.0")
+            .setPositiveButton("ok", null)
+            .setNeutralButton("GitHub") { _: DialogInterface, _: Int ->
+                val url = "https://github.com/alibardide5124/imagine.git"
+                val i = Intent(Intent.ACTION_VIEW)
+                i.data = Uri.parse(url)
+                startActivity(i)
+            }.create()
     }
     private fun progressAlertDialog() : AlertDialog {
+        // Return an AlertDialog but in ProgressDialog shape
         val v = layoutInflater.inflate(R.layout.dialog_progress, null, false)
         v.dialogProgressMessage.text = getString(R.string.wait_moment)
         return AlertDialog.Builder(this)
@@ -157,26 +110,28 @@ class MainActivity : AppCompatActivity() {
             .setCancelable(false)
             .create()
     }
+    private fun toast(message: String, length: Int = Toast.LENGTH_SHORT) : Toast {
+        return Toast.makeText(this, message, length)
+    }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        val dialog = progressAlertDialog()
         if (requestCode == RESULT_PICK_IMAGE && resultCode == Activity.RESULT_OK) {
+            // Check if data not null
             if (data == null) {
-                toast("Failed to open picture!")
+                toast("Failed to open picture!").show()
                 return
             }
             try {
-                dialog.show()
+                progress.show()
+                // Load image into a file
                 imageFile = FileUtil.from(this, data.data!!).also {
-                    loadImage(it.path, mainPicture)
+                    ImageUtil.load(this, it.path, mainPicture)
                     hasImage = true
+                    // Make mainCompress button visible
                     mainCompress.show()
-                    dialog.dismiss()
+                    progress.dismiss()
                 }
-            } catch (e: IOException) {
-                toast("Failed to read picture data!")
-                e.printStackTrace()
-            }
+            } catch (e: IOException) { toast("Failed to read picture data!").show() }
         }
     }
 }

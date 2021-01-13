@@ -6,6 +6,8 @@ import android.provider.OpenableColumns
 import android.util.Log
 import java.io.*
 
+// I've copied this file and have no idea how it works :)
+
 internal object FileUtil {
     private const val EOF = -1
     private const val DEFAULT_BUFFER_SIZE = 1024 * 4
