@@ -38,14 +38,18 @@ class MainActivity : AppCompatActivity() {
         mainCompress.setOnClickListener { compress() }
         mainAbout.setOnClickListener { aboutDialog().show() }
     }
-    private fun askPermission() : Boolean{
-        // Permission listener
-        var result = false
+    private fun pickImage() {
+        // Check if we have permissions
         val listener = object: PermissionListener {
             override fun onPermissionGranted() {
-                result = true
+                // Pick image file
+                val intent = Intent(Intent.ACTION_GET_CONTENT)
+                intent.type = "image/*"
+                startActivityForResult(intent, RESULT_PICK_IMAGE)
             }
-            override fun onPermissionDenied(deniedPermissions: MutableList<String>?) {}
+            override fun onPermissionDenied(deniedPermissions: MutableList<String>?) {
+                toast("Permission Denied").show()
+            }
         }
         // Get Permission with TedPermission library
         TedPermission.with(this)
@@ -54,18 +58,6 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE)
             .check()
-        return result
-    }
-    private fun pickImage() {
-        // Check if we have permissions
-        if (!askPermission()) {
-            toast("Permission Denied").show()
-            return
-        }
-        // Pick image file
-        val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.type = "image/*"
-        startActivityForResult(intent, RESULT_PICK_IMAGE)
     }
     private fun compress() {
         // Check if we have any image
@@ -95,9 +87,9 @@ class MainActivity : AppCompatActivity() {
             .setMessage("Developed by Ali Bardide\n\nLicensed on Apache 2.0")
             .setPositiveButton("ok", null)
             .setNeutralButton("GitHub") { _: DialogInterface, _: Int ->
+                // Open project github page
                 val url = "https://github.com/alibardide5124/imagine.git"
-                val i = Intent(Intent.ACTION_VIEW)
-                i.data = Uri.parse(url)
+                val i = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 startActivity(i)
             }.create()
     }
