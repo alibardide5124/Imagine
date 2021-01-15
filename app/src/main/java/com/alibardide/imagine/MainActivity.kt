@@ -16,8 +16,10 @@ import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.resolution
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.dialog_progress.view.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
@@ -66,14 +68,16 @@ class MainActivity : AppCompatActivity(), ImageListener {
             imageFile?.let { file ->
                 progress.show()
                 // Launch a GlobalScope
-                GlobalScope.launch {
+                GlobalScope.launch(Dispatchers.IO) {
                     val context = this@MainActivity
                     // Decode selected file, compress file and save compressed file
                     val bitmap = BitmapFactory.decodeFile(file.absolutePath)
                     val compressedImage = Compressor.compress(context, file) {
                         resolution(bitmap.width, bitmap.height)
                     }
-                    ImageUtil(context).saveImage(context, compressedImage, saveDir)
+                    withContext(Dispatchers.Main) {
+                        ImageUtil(context).saveImage(context, compressedImage, saveDir)
+                    }
                 }
             }
         } else { toast("No image selected").show() }
@@ -116,11 +120,13 @@ class MainActivity : AppCompatActivity(), ImageListener {
             try {
                 progress.show()
                 // Load image into a file
-                imageFile = FileUtil.from(this, data.data!!).also {
-                    ImageUtil(this).loadImage(this, it.path, mainPicture)
-                    hasImage = true
-                    // Make mainCompress button visible
-                    mainCompress.show()
+                GlobalScope.launch(Dispatchers.IO) {
+                    val context = this@MainActivity
+                    imageFile = FileUtil.from(context, data.data!!).also {
+                        ImageUtil(context).loadImage(context, it, mainPicture)
+                        withContext(Dispatchers.Main) { mainCompress.show() }
+                        hasImage = true
+                    }
                 }
             } catch (e: IOException) { toast("Failed to read picture data!").show() }
         }
