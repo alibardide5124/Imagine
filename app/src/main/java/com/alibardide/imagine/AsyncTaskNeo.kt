@@ -1,13 +1,8 @@
 package com.alibardide.imagine
 
-import android.content.Context
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 
-open class AsyncTaskNeo(private val context: Context) {
+object AsyncTaskNeo {
 
     fun <R, P> executeAsyncTask (
         // Get functions
@@ -16,8 +11,8 @@ open class AsyncTaskNeo(private val context: Context) {
         onProgressUpdate: (P) -> Unit,
         onPostExecute: (R) -> Unit
     ) {
-        // Run in context lifecycle
-        (context as AppCompatActivity).lifecycleScope.launch {
+        // Run in Coroutine scope
+        CoroutineScope(Dispatchers.Main).launch {
             // Run PreExecute
             onPreExecute()
             // Then run doInBackground on IO thread and pass data to result
@@ -29,8 +24,11 @@ open class AsyncTaskNeo(private val context: Context) {
             }
             // On the last run onPostExecute
             onPostExecute(result)
+
         }
     }
+
+
 
 
 }

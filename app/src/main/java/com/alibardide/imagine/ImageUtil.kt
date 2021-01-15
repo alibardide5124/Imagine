@@ -8,35 +8,40 @@ import android.graphics.drawable.Drawable
 import android.os.Environment
 import android.widget.ImageView
 import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.*
 
-object ImageUtil {
+class ImageUtil(private val listener: ImageListener) {
 
-    fun load(context: Context, path: String, imageView: ImageView) {
+    fun loadImage(context: Context, path: String, imageView: ImageView) {
         // Run an AsyncTask
-        AsyncTaskNeo(context).executeAsyncTask<Drawable?, Boolean> (
+        AsyncTaskNeo.executeAsyncTask<Drawable?, Boolean>(
             onPreExecute = {},
             doInBackground = {
                 var drawable: Drawable? = null
                 try {
                     // Get file from path
-                    val inputStream = FileInputStream(path)
+                    val inputStream = withContext(Dispatchers.IO) { FileInputStream(path) }
                     // Round the corners
                     drawable = RoundedBitmapDrawableFactory.create(context.resources, inputStream)
                     drawable.isCircular = true
                     drawable.cornerRadius = 20f
-                } catch (e: IOException) {}
+                } catch (e: IOException) {
+                }
                 drawable
             },
             onProgressUpdate = {},
             onPostExecute = { // Set image if not null
-                 it?.let { imageView.setImageDrawable(it) }
+                it?.let { imageView.setImageDrawable(it) }
+                listener.onProgressFinish()
             }
         )
     }
-    fun save(context: Context, file: File?, saveDir: String) {
+
+    fun saveImage(context: Context, file: File?, saveDir: String) {
         // Run an AsyncTask
-        AsyncTaskNeo(context).executeAsyncTask (
+        AsyncTaskNeo.executeAsyncTask(
             onPreExecute = {},
             doInBackground = { _: suspend (progress: Int) -> Unit ->
                 // Check if file not null
@@ -45,18 +50,19 @@ object ImageUtil {
                     try {
                         if (Environment.MEDIA_MOUNTED == Environment.getExternalStorageState()) {
                             // Get file
-                            val root =
-                                Environment.getExternalStorageDirectory().absolutePath + "/$saveDir"
+                            val root = context.getExternalFilesDir(null)?.absolutePath + "/$saveDir"
                             val dir = File(root)
                             if (!dir.exists()) dir.mkdirs()
                             val sFile = File(dir, "imagine.${file.name}")
-                            FileOutputStream(sFile).use {
-                                // Save it as bitmap
-                                BitmapFactory.decodeFile(file.absolutePath)
-                                    .compress(Bitmap.CompressFormat.JPEG, 70, it)
-                                it.flush()
+                            withContext(Dispatchers.IO) {
+                                FileOutputStream(sFile).use {
+                                    // Save it as bitmap
+                                    BitmapFactory.decodeFile(file.absolutePath)
+                                        .compress(Bitmap.CompressFormat.JPEG, 70, it)
+                                    it.flush()
+                                }
+                                true
                             }
-                            true
                         } else false
                     } catch (e: IOException) {
                         false
@@ -65,6 +71,7 @@ object ImageUtil {
             },
             onProgressUpdate = {},
             onPostExecute = { result ->
+                listener.onProgressFinish()
                 // Display result AlertDialog
                 val alertDialog = AlertDialog.Builder(context)
                     .setTitle("Compress Picture")
@@ -77,4 +84,8 @@ object ImageUtil {
         )
     }
 
+
+}
+interface ImageListener {
+    fun onProgressFinish()
 }

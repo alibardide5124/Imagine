@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ImageListener {
 
     companion object { const val RESULT_PICK_IMAGE = 101 }
     private val saveDir = "Pictures/Imagine/"
@@ -67,13 +67,13 @@ class MainActivity : AppCompatActivity() {
                 progress.show()
                 // Launch a GlobalScope
                 GlobalScope.launch {
+                    val context = this@MainActivity
                     // Decode selected file, compress file and save compressed file
                     val bitmap = BitmapFactory.decodeFile(file.absolutePath)
-                    val compressedImage = Compressor.compress(this@MainActivity, file) {
+                    val compressedImage = Compressor.compress(context, file) {
                         resolution(bitmap.width, bitmap.height)
                     }
-                    ImageUtil.save(this@MainActivity, compressedImage, saveDir)
-                    progress.dismiss()
+                    ImageUtil(context).saveImage(context, compressedImage, saveDir)
                 }
             }
         } else { toast("No image selected").show() }
@@ -117,13 +117,16 @@ class MainActivity : AppCompatActivity() {
                 progress.show()
                 // Load image into a file
                 imageFile = FileUtil.from(this, data.data!!).also {
-                    ImageUtil.load(this, it.path, mainPicture)
+                    ImageUtil(this).loadImage(this, it.path, mainPicture)
                     hasImage = true
                     // Make mainCompress button visible
                     mainCompress.show()
-                    progress.dismiss()
                 }
             } catch (e: IOException) { toast("Failed to read picture data!").show() }
         }
+    }
+
+    override fun onProgressFinish() {
+        progress.dismiss()
     }
 }
