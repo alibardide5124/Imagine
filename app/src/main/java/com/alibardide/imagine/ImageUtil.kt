@@ -1,17 +1,17 @@
 package com.alibardide.imagine
 
-import android.app.AlertDialog
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.Drawable
-import android.os.Environment
-import android.util.DisplayMetrics
+import android.provider.MediaStore
 import android.widget.ImageView
+import androidx.appcompat.app.AlertDialog
 import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.*
+import kotlinx.coroutines.*
+import java.io.File
+import java.io.IOException
 
 class ImageUtil(private val listener: ImageListener) {
 
@@ -28,8 +28,10 @@ class ImageUtil(private val listener: ImageListener) {
                     val sizeBase = bitmap.width / 480
                     val width = bitmap.width / sizeBase
                     val height = bitmap.height / sizeBase
-                    drawable = RoundedBitmapDrawableFactory.create(context.resources,
-                        Bitmap.createScaledBitmap(bitmap, width, height, true))
+                    drawable = RoundedBitmapDrawableFactory.create(
+                        context.resources,
+                        Bitmap.createScaledBitmap(bitmap, width, height, true)
+                    )
                     // Round the corners
                     drawable.isCircular = true
                     drawable.cornerRadius = 20f
@@ -46,58 +48,63 @@ class ImageUtil(private val listener: ImageListener) {
         )
     }
 
-    fun saveImage(context: Context, file: File?, saveDir: String) {
+    fun saveImage(context: Context, file: File, quality: Int) {
         // Run an AsyncTask
         AsyncTaskNeo.executeAsyncTask(
             onPreExecute = {},
             doInBackground = { _: suspend (progress: Int) -> Unit ->
-                // Check if file not null
-                if (file == null) false
-                else {
-                    try {
-                        if (Environment.MEDIA_MOUNTED == Environment.getExternalStorageState()) {
-                            // Get file
-                            val root = "${getAbsoluteDir(context)}/$saveDir"
-                            val dir = File(root)
-                            if (!dir.exists()) dir.mkdirs()
-                            val sFile = File(dir, "imagine.${file.name}")
-                            withContext(Dispatchers.IO) {
-                                FileOutputStream(sFile).use {
-                                    // Save it as bitmap
-                                    BitmapFactory.decodeFile(file.absolutePath)
-                                        .compress(Bitmap.CompressFormat.JPEG, 70, it)
-                                    it.flush()
-                                }
-                                true
-                            }
-                        } else false
-                    } catch (e: IOException) {
-                        false
-                    }
+                val imageCollection = sdk29AndUp {
+                    MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                } ?: MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+
+                val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, "imagine.${file.name}")
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.WIDTH, bitmap.width)
+                    put(MediaStore.Images.Media.HEIGHT, bitmap.height)
+                }
+                try {
+                    context.contentResolver.insert(imageCollection, contentValues)?.also { uri ->
+                        context.contentResolver.openOutputStream(uri).use { outputStream ->
+                            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream))
+                                throw IOException("Couldn't save save bitmap")
+                        }
+                    } ?: throw IOException("Couldn't create MediaStore entry")
+                    true
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                    false
                 }
             },
             onProgressUpdate = {},
             onPostExecute = { result ->
+                CoroutineScope(Dispatchers.IO).launch {
+                    // Delete cached image
+                    file.delete()
+                    if (file.exists()) {
+                        file.canonicalFile.delete()
+                        if (file.exists()) context.deleteFile(file.name)
+                    }
+                }
+
                 listener.onProgressFinish()
                 // Display result AlertDialog
-                val alertDialog = AlertDialog.Builder(context)
+                AlertDialog.Builder(context)
                     .setTitle("Compress Picture")
-                    .setMessage("failed to compress picture!")
+                    .setMessage(
+                        if (result) "File saved to: Pictures\\"
+                        else "failed to compress picture!"
+                    )
                     .setPositiveButton("ok", null)
-                if (result) alertDialog.setMessage("File saved to:\n$saveDir")
-                alertDialog.create()
+                    .create()
                     .show()
             }
         )
     }
 
-    private fun getAbsoluteDir(context: Context) : String {
-        val rootPath = context.getExternalFilesDir(null)!!.absolutePath
-        val extra = "Android/data/${BuildConfig.APPLICATION_ID}/files"
-        return File(rootPath.replace(extra, "")).absolutePath
-    }
-
 }
+
 interface ImageListener {
     fun onProgressFinish()
 }

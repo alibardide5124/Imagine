@@ -7,15 +7,18 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import com.gun0912.tedpermission.PermissionListener
-import com.gun0912.tedpermission.TedPermission
+import com.alibardide.imagine.databinding.ActivityMainBinding
+import com.alibardide.imagine.databinding.DialogProgressBinding
+import com.vmadalin.easypermissions.EasyPermissions
+import com.vmadalin.easypermissions.dialogs.SettingsDialog
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.resolution
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.dialog_progress.view.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -23,72 +26,77 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
-class MainActivity : AppCompatActivity(), ImageListener {
+class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks, ImageListener {
 
-    companion object { const val RESULT_PICK_IMAGE = 101 }
-    private val saveDir = "Pictures/Imagine/"
-    private var hasImage = false
-    private var imageFile: File? = null
+    companion object {
+        const val PERMISSION_READ_EXTERNAL_STORAGE_REQUEST_CODE = 101
+        const val PERMISSION_WRITE_EXTERNAL_STORAGE_REQUEST_CODE = 102
+    }
+
+    private lateinit var binding: ActivityMainBinding
     private lateinit var progress: AlertDialog
+    private var imageFile: File? = null
+    private val resultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            onActivityResult(result)
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         progress = progressAlertDialog()
-        mainPick.setOnClickListener { pickImage() }
-        mainCompress.setOnClickListener { compress() }
-        mainAbout.setOnClickListener { aboutDialog().show() }
-    }
-    private fun pickImage() {
-        // Check if we have permissions
-        val listener = object: PermissionListener {
-            override fun onPermissionGranted() {
-                // Pick image file
-                val intent = Intent(Intent.ACTION_GET_CONTENT)
-                intent.type = "image/*"
-                startActivityForResult(intent, RESULT_PICK_IMAGE)
-            }
-            override fun onPermissionDenied(deniedPermissions: MutableList<String>?) {
-                toast("Permission Denied").show()
-            }
+        binding.mainAbout.setOnClickListener { aboutDialog().show() }
+
+        binding.mainPick.setOnClickListener {
+            if (hasReadExternalStoragePermission())
+                choosePicture()
+            else
+                requestReadExternalStoragePermission()
         }
-        // Get Permission with TedPermission library
-        TedPermission.with(this)
-            .setPermissionListener(listener)
-            .setPermissions(
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            .check()
+        binding.mainCompress.setOnClickListener {
+            if (hasWriteExternalStoragePermission())
+                compressPicture()
+            else
+                requestWriteExternalStoragePermission()
+        }
     }
-    private fun compress() {
-        // Check if we have any image
-        if (hasImage) {
-            // If image not null do something
-            imageFile?.let { file ->
-                progress.show()
-                // Launch a GlobalScope
-                GlobalScope.launch(Dispatchers.IO) {
-                    val context = this@MainActivity
-                    // Decode selected file, compress file and save compressed file
-                    val bitmap = BitmapFactory.decodeFile(file.absolutePath)
-                    val compressedImage = Compressor.compress(context, file) {
-                        resolution(bitmap.width, bitmap.height)
-                    }
-                    withContext(Dispatchers.Main) {
-                        ImageUtil(context).saveImage(context, compressedImage, saveDir)
-                    }
+
+    private fun choosePicture() {
+        // Pick image file
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply { type = "image/*" }
+        resultLauncher.launch(intent)
+    }
+
+    private fun compressPicture() {
+        // Check if image is not null
+        imageFile?.let { file ->
+            progress.show()
+            // Launch a GlobalScope
+            GlobalScope.launch(Dispatchers.IO) {
+                val context = this@MainActivity
+                // Decode selected file, compress file and save compressed file
+                val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                val compressedImage = Compressor.compress(context, file) {
+                    resolution(bitmap.width, bitmap.height)
+                }
+                withContext(Dispatchers.Main) {
+                    // Save image to external storage
+                    ImageUtil(context).saveImage(context, compressedImage)
                 }
             }
-        } else { toast("No image selected").show() }
+        }
     }
-    private fun aboutDialog() : AlertDialog {
+
+    private fun aboutDialog(): AlertDialog {
         // About alert dialog
         // info for get app version
         val info = packageManager.getPackageInfo(packageName, 0)
         return AlertDialog.Builder(this)
             .setTitle(getString(R.string.app_name) + " ${info.versionName}")
-            .setMessage("Developed by Ali Bardide\n\nLicensed on Apache 2.0")
+            .setMessage("Developed by Ali Bardide\nLicensed on Apache 2.0")
             .setPositiveButton("ok", null)
             .setNeutralButton("GitHub") { _: DialogInterface, _: Int ->
                 // Open project github page
@@ -97,42 +105,91 @@ class MainActivity : AppCompatActivity(), ImageListener {
                 startActivity(i)
             }.create()
     }
-    private fun progressAlertDialog() : AlertDialog {
+
+    private fun progressAlertDialog(): AlertDialog {
         // Return an AlertDialog but in ProgressDialog shape
-        val v = layoutInflater.inflate(R.layout.dialog_progress, null, false)
-        v.dialogProgressMessage.text = getString(R.string.wait_moment)
+        val binding = DialogProgressBinding.inflate(layoutInflater)
+        binding.dialogProgressMessage.text = getString(R.string.wait_moment)
         return AlertDialog.Builder(this)
-            .setView(v)
+            .setView(binding.root)
             .setCancelable(false)
             .create()
     }
-    private fun toast(message: String, length: Int = Toast.LENGTH_SHORT) : Toast {
-        return Toast.makeText(this, message, length)
-    }
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == RESULT_PICK_IMAGE && resultCode == Activity.RESULT_OK) {
-            // Check if data not null
-            if (data == null) {
-                toast("Failed to open picture!").show()
-                return
-            }
+
+    private fun onActivityResult(result: ActivityResult) {
+        // Check if operation was successful
+        if (result.resultCode == Activity.RESULT_OK) {
             try {
                 progress.show()
                 // Load image into a file
                 GlobalScope.launch(Dispatchers.IO) {
                     val context = this@MainActivity
-                    imageFile = FileUtil.from(context, data.data!!).also {
-                        ImageUtil(context).loadImage(context, it, mainPicture)
-                        withContext(Dispatchers.Main) { mainCompress.show() }
-                        hasImage = true
+                    imageFile = FileUtil.from(context, result.data?.data!!).also {
+                        ImageUtil(context).loadImage(context, it, binding.mainPicture)
+                        withContext(Dispatchers.Main) { binding.mainCompress.show() }
                     }
                 }
-            } catch (e: IOException) { toast("Failed to read picture data!").show() }
+            } catch (e: IOException) {
+                Toast.makeText(this, "Failed to open picture!", Toast.LENGTH_SHORT).show()
+                e.printStackTrace()
+            }
         }
     }
 
-    override fun onProgressFinish() {
-        progress.dismiss()
+    private fun hasReadExternalStoragePermission() =
+        EasyPermissions.hasPermissions(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+
+    private fun hasWriteExternalStoragePermission() =
+        EasyPermissions.hasPermissions(
+            this,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) || Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+
+    private fun requestReadExternalStoragePermission() {
+        EasyPermissions.requestPermissions(
+            this,
+            "I need your read storage permission to choose picture",
+            PERMISSION_READ_EXTERNAL_STORAGE_REQUEST_CODE,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        )
     }
+
+    private fun requestWriteExternalStoragePermission() {
+        EasyPermissions.requestPermissions(
+            this,
+            "I need your write storage permission to save picture",
+            PERMISSION_WRITE_EXTERNAL_STORAGE_REQUEST_CODE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
+    }
+
+    override fun onPermissionsDenied(requestCode: Int, perms: List<String>) {
+        when {
+            EasyPermissions.somePermissionPermanentlyDenied(this, perms) -> SettingsDialog.Builder(
+                this
+            ).build().show()
+            requestCode == PERMISSION_READ_EXTERNAL_STORAGE_REQUEST_CODE -> requestReadExternalStoragePermission()
+            requestCode == PERMISSION_WRITE_EXTERNAL_STORAGE_REQUEST_CODE -> requestWriteExternalStoragePermission()
+        }
+    }
+
+    override fun onPermissionsGranted(requestCode: Int, perms: List<String>) {
+        if (requestCode == PERMISSION_READ_EXTERNAL_STORAGE_REQUEST_CODE)
+            choosePicture()
+        else if (requestCode == PERMISSION_WRITE_EXTERNAL_STORAGE_REQUEST_CODE)
+            compressPicture()
+    }
+
+    override fun onProgressFinish() =
+        progress.dismiss()
+
 }
