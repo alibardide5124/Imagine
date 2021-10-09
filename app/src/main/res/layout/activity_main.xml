@@ -37,7 +37,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
-        android:text="@string/pick_image"
+        android:text="@string/choose_image"
         android:textColor="?android:textColorPrimaryInverse"
         app:backgroundTint="@color/colorPrimary"
         app:icon="@drawable/ic_download"

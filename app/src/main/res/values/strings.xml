@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Imagine</string>
     <string name="wait_moment">Wait a moment…</string>
-    <string name="pick_image">Pick Image</string>
+    <string name="choose_image">Choose Image</string>
     <string name="compress_image">Compress Image</string>
 </resources>

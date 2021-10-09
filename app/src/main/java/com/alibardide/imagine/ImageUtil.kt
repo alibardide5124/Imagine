@@ -48,7 +48,7 @@ class ImageUtil(private val listener: ImageListener) {
         )
     }
 
-    fun saveImage(context: Context, file: File, quality: Int) {
+    fun saveImage(context: Context, file: File, quality: Int = 75) {
         // Run an AsyncTask
         AsyncTaskNeo.executeAsyncTask(
             onPreExecute = {},
