@@ -13,7 +13,7 @@ Image Quality
 I dont say anything about images quality. Just compare it yourself (open image in new tab to zoom on it): 
 | Original Image (3.38 Mb)                                                                                                           | Compressed Image (1.00 mb)
 -------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| <img src="/readme.files/IMG_20211010_060732.jpg" alt="Original image" title="Original image (3.38 mb)" width="300" height="300" /> | <img src="/readme.files/imagine.IMG_20211010_060732.jpg" alt="Original image" title="Original image (3.38 mb)" width="300" height="300" /> |
+| <img src="/readme.files/IMG_20211010_060732.jpg" alt="Original image" title="Original image (3.38 mb)" width="300" /> | <img src="/readme.files/imagine.IMG_20211010_060732.jpg" alt="Original image" title="Original image (3.38 mb)" width="300" /> |
 </br>
 
 I Hope you enjoy it :)
@@ -30,5 +30,5 @@ And [**follow me**](https://https://https://github.com/alibardide5124?tab=follow
 License
 -----
 
-CardViewPlus by [Ali Bardide](https://github.com/alibardide5124) is licensed under a [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0).
+Imagine by [Ali Bardide](https://github.com/alibardide5124) is licensed under a [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
