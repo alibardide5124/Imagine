@@ -1,11 +1,11 @@
-<img src="/readme.files/imagine.png" alt="icon" title="imagine" width="60" height="60" align="left" />
+<img src="/readme.files/icon-512.png" alt="icon" title="imagine" width="60" height="60" align="left" />
 
 # Imagine
 
 Android image compressor
 
-You can reduse your image sizes with this app. Just in two simple step; Choose image and compress it... Exacly this easy.</br>
-Download app from [**here**](https://github.com/alibardide5124/Imagine/releases/download/1.0.1/app-release.apk)
+You can reduce your image sizes with this app. Just in two simple step; Choose image and compress it...</br>
+Download app from [**here**](https://github.com/alibardide5124/Imagine/releases/download/1.2.0/app-release.apk)
 </br></br>
 
 Image Quality

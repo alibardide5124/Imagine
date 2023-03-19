@@ -15,6 +15,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/ic_info_square"
+        app:tint="?android:textColorPrimary"
         tools:ignore="ContentDescription" />
 
     <ImageView
@@ -38,10 +39,10 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
         android:text="@string/choose_image"
-        android:textColor="?android:textColorPrimaryInverse"
+        android:textColor="@color/colorWhite"
         app:backgroundTint="@color/colorPrimary"
         app:icon="@drawable/ic_download"
-        app:iconTint="?android:textColorPrimaryInverse"
+        app:iconTint="@color/colorWhite"
         app:layout_constraintBottom_toTopOf="@+id/mainCompress"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -52,11 +53,11 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="32dp"
         android:text="@string/compress_image"
-        android:textColor="?android:textColorPrimaryInverse"
+        android:textColor="@color/colorWhite"
         android:visibility="invisible"
         app:backgroundTint="@color/colorAccent"
         app:icon="@drawable/ic_upload"
-        app:iconTint="?android:textColorPrimaryInverse"
+        app:iconTint="@color/colorWhite"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

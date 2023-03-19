@@ -13,6 +13,7 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.alibardide.imagine.databinding.ActivityMainBinding
 import com.alibardide.imagine.databinding.DialogProgressBinding
 import com.vmadalin.easypermissions.EasyPermissions
@@ -20,7 +21,6 @@ import com.vmadalin.easypermissions.dialogs.SettingsDialog
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.resolution
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -74,8 +74,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks, I
         // Check if image is not null
         imageFile?.let { file ->
             progress.show()
-            // Launch a GlobalScope
-            GlobalScope.launch(Dispatchers.IO) {
+            lifecycleScope.launch(Dispatchers.IO) {
                 val context = this@MainActivity
                 // Decode selected file, compress file and save compressed file
                 val bitmap = BitmapFactory.decodeFile(file.absolutePath)
@@ -93,9 +92,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks, I
     private fun aboutDialog(): AlertDialog {
         // About alert dialog
         // info for get app version
-        val info = packageManager.getPackageInfo(packageName, 0)
         return AlertDialog.Builder(this)
-            .setTitle(getString(R.string.app_name) + " ${info.versionName}")
+            .setTitle(getString(R.string.app_name) + " ${BuildConfig.VERSION_NAME}")
             .setMessage("Developed by Ali Bardide\nLicensed on Apache 2.0")
             .setPositiveButton("ok", null)
             .setNeutralButton("GitHub") { _: DialogInterface, _: Int ->
@@ -122,7 +120,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks, I
             try {
                 progress.show()
                 // Load image into a file
-                GlobalScope.launch(Dispatchers.IO) {
+                lifecycleScope.launch(Dispatchers.IO) {
                     val context = this@MainActivity
                     imageFile = FileUtil.from(context, result.data?.data!!).also {
                         ImageUtil(context).loadImage(context, it, binding.mainPicture)
@@ -174,7 +172,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks, I
 
     override fun onPermissionsDenied(requestCode: Int, perms: List<String>) {
         when {
-            EasyPermissions.somePermissionPermanentlyDenied(this, perms) -> SettingsDialog.Builder(
+            EasyPermissions.somePermissionPermanentlyDenied(
+                this,
+                perms
+            ) -> SettingsDialog.Builder(
                 this
             ).build().show()
             requestCode == PERMISSION_READ_EXTERNAL_STORAGE_REQUEST_CODE -> requestReadExternalStoragePermission()
